@@ -648,6 +648,18 @@ mod tests {
     }
 
     #[test]
+    fn a_context_prefix_never_reaches_a_translated_value() {
+        // A `context|label` key keeps two labels with the same English spelling apart; the context
+        // belongs to the key, so a catalog that carries it over shows `Options|Général` (#1891).
+        for language in Language::ALL {
+            for (english, _) in JAPANESE {
+                let text = language.tr(english);
+                assert!(!text.contains('|'), "{language:?} shows the key's context for {english}: {text}");
+            }
+        }
+    }
+
+    #[test]
     fn unknown_saved_language_keeps_the_other_preferences() {
         let ui: crate::UiState = serde_json::from_str(r#"{"dark": true, "language": "xx"}"#).unwrap();
         assert!(ui.dark);
