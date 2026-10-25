@@ -1777,7 +1777,7 @@ fn formulas(app: &mut SheetApp, ui: &mut Ui) {
                     if f["category"].as_str() == Some(cat)
                         && let Some(n) = f["name"].as_str()
                     {
-                        let locale = app.ui.language.formula_locale();
+                        let locale = app.ui.language.formula_locale(app.ui.decimal_separator);
                         let name =
                             app.session.active().map(|d| crate::formula_locale::completion_name(n, locale, &d.wb, d.wb.active_sheet)).unwrap_or(n);
                         let desc = crate::formula_locale::description(n, locale).unwrap_or_default();

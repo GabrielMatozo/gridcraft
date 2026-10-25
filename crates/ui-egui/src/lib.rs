@@ -76,6 +76,23 @@ pub struct UiState {
     /// [`INTERFACE_SCALE_MIN`]..=[`INTERFACE_SCALE_MAX`]; a malformed saved value reads as 100.
     #[serde(deserialize_with = "lenient_interface_scale")]
     pub interface_scale: u16,
+    /// Decimal separator for formula entry and number parsing. Dot by default; Comma for
+    /// locales that use comma as decimal separator. Persisted in ui.json so the preference
+    /// survives restarts.
+    #[serde(default = "default_decimal_separator")]
+    pub decimal_separator: DecimalSeparator,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DecimalSeparator {
+    #[default]
+    Dot,
+    Comma,
+}
+
+fn default_decimal_separator() -> DecimalSeparator {
+    DecimalSeparator::Dot
 }
 
 pub const INTERFACE_SCALE_MIN: u16 = 75;
@@ -107,6 +124,7 @@ impl Default for UiState {
             keytip_invoke: None,
             language: i18n::Language::En,
             interface_scale: 100,
+            decimal_separator: DecimalSeparator::default(),
         }
     }
 }
@@ -634,6 +652,21 @@ impl SheetApp {
                     None => Err(format!("unknown language {code:?} (use \"en\", \"es\", \"zh\", \"ja\", \"ko\", \"ru\", \"pt\" or \"cs\")")),
                 }
             }
+            "app.decimalSeparator.set" => {
+                // `{"separator": "dot"|"comma"}`.
+                let sep = p.get("separator").and_then(Json::as_str).unwrap_or("");
+                match sep {
+                    "dot" => {
+                        self.ui.decimal_separator = DecimalSeparator::Dot;
+                        Ok(json!({"separator": "dot"}))
+                    }
+                    "comma" => {
+                        self.ui.decimal_separator = DecimalSeparator::Comma;
+                        Ok(json!({"separator": "comma"}))
+                    }
+                    _ => Err(format!("unknown decimal separator {sep:?} (use \"dot\" or \"comma\")")),
+                }
+            }
             "app.language.english" => {
                 self.ui.language = i18n::Language::En;
                 Ok(json!({"language": i18n::Language::En}))
@@ -694,7 +727,14 @@ impl SheetApp {
                     let text = text.map(|text| {
                         self.session
                             .active()
-                            .map(|d| formula_locale::display_template(&text, self.ui.language.formula_locale(), &d.wb, d.wb.active_sheet))
+                            .map(|d| {
+                                formula_locale::display_template(
+                                    &text,
+                                    self.ui.language.formula_locale(self.ui.decimal_separator),
+                                    &d.wb,
+                                    d.wb.active_sheet,
+                                )
+                            })
                             .unwrap_or(text)
                     });
                     self.begin_edit(text, false);
@@ -876,7 +916,7 @@ impl SheetApp {
         if text.is_none() && sh.cell_pictures.contains_key(&at) {
             return;
         }
-        let locale = self.ui.language.formula_locale();
+        let locale = self.ui.language.formula_locale(self.ui.decimal_separator);
         let current = if sh.cell_pictures.contains_key(&at) {
             String::new()
         } else {
@@ -1102,6 +1142,7 @@ impl SheetApp {
         text_box::before_ui(self, &ctx);
         // The language the widgets translate with this frame (see `i18n::current`).
         i18n::set_current(&ctx, self.ui.language);
+        i18n::set_current_decimal_separator(&ctx, self.ui.decimal_separator);
         let t = theme::Tokens::get(&ctx);
         if self.backstage.is_none() {
             self.ribbon_keys(&ctx);

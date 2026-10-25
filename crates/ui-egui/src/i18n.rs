@@ -108,8 +108,12 @@ impl Language {
         }
     }
 
-    pub fn formula_locale(self) -> gridcraft_engine::formula::FormulaLocale {
-        if self == Self::Es { gridcraft_engine::formula::FormulaLocale::Es } else { gridcraft_engine::formula::FormulaLocale::En }
+    pub fn formula_locale(self, decimal_separator: crate::DecimalSeparator) -> gridcraft_engine::formula::FormulaLocale {
+        match (self, decimal_separator) {
+            (Self::Es, _) => gridcraft_engine::formula::FormulaLocale::Es,
+            (_, crate::DecimalSeparator::Comma) => gridcraft_engine::formula::FormulaLocale::Es,
+            _ => gridcraft_engine::formula::FormulaLocale::En,
+        }
     }
 
     /// Translates an interface label; untranslated labels fall back to English.
@@ -171,6 +175,20 @@ pub fn current(ctx: &egui::Context) -> Language {
 /// Sets the language for the current frame; call once per frame before anything is drawn.
 pub fn set_current(ctx: &egui::Context, language: Language) {
     ctx.data_mut(|d| d.insert_temp(lang_key(), language));
+}
+
+/// The decimal separator the current frame is using. `Dot` when unset.
+fn decimal_separator_key() -> egui::Id {
+    egui::Id::new("gridcraft.decimal_separator")
+}
+
+pub fn current_decimal_separator(ctx: &egui::Context) -> crate::DecimalSeparator {
+    ctx.data(|d| d.get_temp(decimal_separator_key())).unwrap_or_default()
+}
+
+/// Sets the decimal separator for the current frame; call once per frame before anything is drawn.
+pub fn set_current_decimal_separator(ctx: &egui::Context, sep: crate::DecimalSeparator) {
+    ctx.data_mut(|d| d.insert_temp(decimal_separator_key(), sep));
 }
 
 /// English label → Japanese. Keys are the exact interface strings (command ids, file names and
@@ -725,5 +743,36 @@ mod tests {
         for l in Language::ALL {
             assert_eq!(Language::parse(l.code()), Some(l));
         }
+    }
+
+    #[test]
+    fn decimal_separator_persists_and_switches_formula_locale() {
+        // Default is dot (English-style).
+        let ui = crate::UiState::default();
+        assert_eq!(ui.decimal_separator, crate::DecimalSeparator::Dot);
+        assert_eq!(ui.language.formula_locale(ui.decimal_separator), gridcraft_engine::formula::FormulaLocale::En);
+
+        // Comma forces the Spanish formula locale even on English.
+        let mut ui2 = ui.clone();
+        ui2.decimal_separator = crate::DecimalSeparator::Comma;
+        assert_eq!(ui2.language.formula_locale(ui2.decimal_separator), gridcraft_engine::formula::FormulaLocale::Es);
+
+        // Round-trip through serde.
+        let json = serde_json::to_string(&ui2).unwrap();
+        let restored: crate::UiState = serde_json::from_str(&json).unwrap();
+        assert_eq!(restored.decimal_separator, crate::DecimalSeparator::Comma);
+        assert_eq!(restored.language, Language::En);
+    }
+
+    #[test]
+    fn decimal_separator_command_switches_and_persist() {
+        let mut app = crate::SheetApp::new(gridcraft_engine::Session::default(), Default::default());
+        assert_eq!(app.ui.decimal_separator, crate::DecimalSeparator::Dot);
+        app.run("app.decimalSeparator.set", serde_json::json!({"separator": "comma"})).unwrap();
+        assert_eq!(app.ui.decimal_separator, crate::DecimalSeparator::Comma);
+        let restored: crate::UiState = serde_json::from_str(&serde_json::to_string(&app.ui).unwrap()).unwrap();
+        assert_eq!(restored.decimal_separator, crate::DecimalSeparator::Comma);
+        // Invalid value is an error, not a dialog.
+        assert!(app.run("app.decimalSeparator.set", serde_json::json!({})).is_err());
     }
 }

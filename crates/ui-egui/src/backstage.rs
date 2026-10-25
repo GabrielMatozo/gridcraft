@@ -955,6 +955,22 @@ fn options(app: &mut SheetApp, ui: &mut Ui) {
             }
         });
         ui.end_row();
+        ui.label(lang.tr("Decimal separator"));
+        egui::ComboBox::from_id_salt("backstage_decimal_separator")
+            .width(160.0)
+            .selected_text(match app.ui.decimal_separator {
+                crate::DecimalSeparator::Dot => lang.tr("Dot (.)"),
+                crate::DecimalSeparator::Comma => lang.tr("Comma (,)"),
+            })
+            .show_ui(ui, |ui| {
+                if ui.selectable_label(app.ui.decimal_separator == crate::DecimalSeparator::Dot, lang.tr("Dot (.)")).clicked() {
+                    app.run_or_alert("app.decimalSeparator.set", json!({"separator": "dot"}));
+                }
+                if ui.selectable_label(app.ui.decimal_separator == crate::DecimalSeparator::Comma, lang.tr("Comma (,)")).clicked() {
+                    app.run_or_alert("app.decimalSeparator.set", json!({"separator": "comma"}));
+                }
+            });
+        ui.end_row();
     });
     ui.add_space(6.0);
     let mut formula_bar = app.session.prefs.formula_bar;
