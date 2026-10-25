@@ -81,6 +81,10 @@ pub struct UiState {
     /// survives restarts.
     #[serde(default = "default_decimal_separator")]
     pub decimal_separator: DecimalSeparator,
+    /// AutoSave: save .xlsx workbooks automatically after every change. Persisted in ui.json so
+    /// the preference survives restarts.
+    #[serde(default)]
+    pub autosave: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -125,6 +129,7 @@ impl Default for UiState {
             language: i18n::Language::En,
             interface_scale: 100,
             decimal_separator: DecimalSeparator::default(),
+            autosave: false,
         }
     }
 }
@@ -667,6 +672,17 @@ impl SheetApp {
                     _ => Err(format!("unknown decimal separator {sep:?} (use \"dot\" or \"comma\")")),
                 }
             }
+            "app.autosave.set" => {
+                // `{"enabled": true|false}`.
+                match p.get("enabled").and_then(Json::as_bool) {
+                    Some(enabled) => {
+                        self.ui.autosave = enabled;
+                        self.grid.last_autosave = 0.0;
+                        Ok(json!({"enabled": enabled}))
+                    }
+                    None => Err("missing `enabled` (true or false)".into()),
+                }
+            }
             "app.language.english" => {
                 self.ui.language = i18n::Language::En;
                 Ok(json!({"language": i18n::Language::En}))
@@ -1187,7 +1203,7 @@ impl SheetApp {
         }
         self.perf.last = now;
         // AutoSave: save workbooks that have a file shortly after they change.
-        if self.grid.autosave
+        if self.ui.autosave
             && self.editor.is_none()
             && self.text_box_editor.is_none()
             && now - self.grid.last_autosave > 2000.0

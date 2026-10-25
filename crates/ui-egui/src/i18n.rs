@@ -775,4 +775,18 @@ mod tests {
         // Invalid value is an error, not a dialog.
         assert!(app.run("app.decimalSeparator.set", serde_json::json!({})).is_err());
     }
+
+    #[test]
+    fn autosave_preference_persists_and_commands() {
+        let mut app = crate::SheetApp::new(gridcraft_engine::Session::default(), Default::default());
+        assert!(!app.ui.autosave);
+        app.run("app.autosave.set", serde_json::json!({"enabled": true})).unwrap();
+        assert!(app.ui.autosave);
+        let restored: crate::UiState = serde_json::from_str(&serde_json::to_string(&app.ui).unwrap()).unwrap();
+        assert!(restored.autosave);
+        app.run("app.autosave.set", serde_json::json!({"enabled": false})).unwrap();
+        assert!(!app.ui.autosave);
+        // Invalid value is an error.
+        assert!(app.run("app.autosave.set", serde_json::json!({})).is_err());
+    }
 }
