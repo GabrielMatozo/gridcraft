@@ -956,6 +956,9 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Protect\nSheet" => "Proteger\nPlanilha",
         "Watch\nWindow" => "Janela de\nInspeção",
         "Workbook\nStatistics" => "Estatísticas da\nPasta de Trabalho",
+        "Decimal separator" => "Separador decimal",
+        "Dot (.)" => "Ponto (.)",
+        "Comma (,)" => "Vírgula (,)",
         _ => return None,
     })
 }

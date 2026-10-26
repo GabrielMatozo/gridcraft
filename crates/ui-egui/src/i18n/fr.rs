@@ -410,6 +410,9 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Workbook calculation" => "Calcul du classeur",
         "Enable iterative calculation" => "Activer le calcul itératif",
         "Calculation settings are saved with the workbook." => "Les paramètres de calcul sont enregistrés avec le classeur.",
+        "Decimal separator" => "Séparateur décimal",
+        "Dot (.)" => "Point (.)",
+        "Comma (,)" => "Virgule (,)",
         _ => return None,
     })
 }

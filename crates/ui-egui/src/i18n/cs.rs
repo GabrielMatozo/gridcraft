@@ -535,6 +535,9 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Zoom Out" => "Oddálit",
         // widgets.rs (alphabetical keys).
         "Dismiss" => "Zavřít",
+        "Decimal separator" => "Desetinný oddělovač",
+        "Dot (.)" => "Tečka (.)",
+        "Comma (,)" => "Čárka (,)",
         _ => return None,
     })
 }

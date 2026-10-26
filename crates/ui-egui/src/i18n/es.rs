@@ -440,6 +440,9 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Compact" => "Compacto",
         "Outline" => "Esquema",
         "Tabular" => "Tabular",
+        "Decimal separator" => "Separador decimal",
+        "Dot (.)" => "Punto (.)",
+        "Comma (,)" => "Coma (,)",
         _ => return None,
     })
 }

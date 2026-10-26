@@ -408,6 +408,9 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Bottom Margin" => "Donja margina",
         "Header Margin" => "Margina zaglavlja",
         "Footer Margin" => "Margina podnožja",
+        "Decimal separator" => "Decimalni separator",
+        "Dot (.)" => "Tačka (.)",
+        "Comma (,)" => "Zarez (,)",
         _ => return None,
     })
 }

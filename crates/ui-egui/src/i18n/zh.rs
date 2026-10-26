@@ -402,6 +402,9 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Workbook calculation" => "工作簿计算",
         "Enable iterative calculation" => "启用迭代计算",
         "Calculation settings are saved with the workbook." => "计算设置随工作簿一起保存。",
+        "Decimal separator" => "小数点分隔符",
+        "Dot (.)" => "点 (.)",
+        "Comma (,)" => "逗号 (,)",
         _ => return None,
     })
 }

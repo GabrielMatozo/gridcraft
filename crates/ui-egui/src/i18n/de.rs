@@ -411,6 +411,9 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Dark" => "Dunkel",
         "Sheet Options|View" => "Anzeige",
         "Print" => "Drucken",
+        "Decimal separator" => "Dezimaltrennzeichen",
+        "Dot (.)" => "Punkt (.)",
+        "Comma (,)" => "Komma (,)",
         _ => return None,
     })
 }
