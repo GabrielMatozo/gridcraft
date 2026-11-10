@@ -185,8 +185,13 @@ impl Language {
         }
     }
 
-    pub fn formula_locale(self) -> gridcraft_engine::formula::FormulaLocale {
-        if self == Self::Es { gridcraft_engine::formula::FormulaLocale::Es } else { gridcraft_engine::formula::FormulaLocale::En }
+    pub fn formula_locale(self, decimal_separator: crate::DecimalSeparator) -> gridcraft_engine::formula::FormulaLocale {
+        match (self, decimal_separator) {
+            (Self::Es, crate::DecimalSeparator::Comma) => gridcraft_engine::formula::FormulaLocale::Es,
+            (Self::Es, crate::DecimalSeparator::Dot) => gridcraft_engine::formula::FormulaLocale::En,
+            (_, crate::DecimalSeparator::Comma) => gridcraft_engine::formula::FormulaLocale::Es,
+            _ => gridcraft_engine::formula::FormulaLocale::En,
+        }
     }
 
     /// Translates an interface label; untranslated labels fall back to English.
@@ -194,7 +199,12 @@ impl Language {
     /// A label that needs two translations (Home's text "Orientation" vs Page Layout's print
     /// "Orientation") is keyed `context|label`: English shows only the part after the `|`.
     pub fn tr(self, text: &str) -> &str {
-        let translated = match self {
+        self.translated(text).unwrap_or_else(|| text.rsplit_once('|').map_or(text, |(_, label)| label))
+    }
+
+    /// The catalog's own translation of `text`, or `None` when it falls back to English.
+    fn translated(self, text: &str) -> Option<&'static str> {
+        match self {
             Self::En => None,
             Self::Es => es::translate(text),
             Self::El => el::translate(text),
@@ -214,8 +224,7 @@ impl Language {
             Self::Vi => vi::translate(text),
             Self::Nl => nl::translate(text),
             Self::Ro => ro::translate(text),
-        };
-        translated.unwrap_or_else(|| text.rsplit_once('|').map_or(text, |(_, label)| label))
+        }
     }
 
     pub(crate) fn tr_error(self, message: &str) -> String {
@@ -296,6 +305,21 @@ pub fn set_current(ctx: &egui::Context, language: Language) {
     ctx.data_mut(|d| d.insert_temp(lang_key(), language));
 }
 
+/// egui context-data key holding the decimal separator of the frame being drawn.
+fn decimal_separator_key() -> egui::Id {
+    egui::Id::new("gridcraft.decimal_separator")
+}
+
+/// The decimal separator the current frame is using. Defaults to `DecimalSeparator::Dot`.
+pub fn current_decimal_separator(ctx: &egui::Context) -> crate::DecimalSeparator {
+    ctx.data(|d| d.get_temp(decimal_separator_key())).unwrap_or_default()
+}
+
+/// Sets the decimal separator for the current frame; call once per frame before anything is drawn.
+pub fn set_current_decimal_separator(ctx: &egui::Context, sep: crate::DecimalSeparator) {
+    ctx.data_mut(|d| d.insert_temp(decimal_separator_key(), sep));
+}
+
 /// `name` lowercased with the Latin accents that occur in language names folded away, so a
 /// byte-wise sort reads alphabetically. Other scripts are left as they are.
 fn name_sort_key(name: &str) -> String {
@@ -320,6 +344,23 @@ fn name_sort_key(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every shipped catalog names GridCraft's own Diagram and Decorative Text features, and
+    /// Diagram never repeats that catalog's chart word (both sit on the Insert tab).
+    #[test]
+    fn every_catalog_has_distinct_diagram_and_decorative_text() {
+        for language in Language::ALL.into_iter().filter(|l| *l != Language::En) {
+            let code = language.code();
+            let diagram = language.translated("Diagram");
+            assert!(diagram.is_some(), "{code}: Diagram");
+            assert!(language.translated("Decorative Text").is_some(), "{code}: Decorative Text");
+            for chart in ["Chart", "Charts"] {
+                if let Some(chart_text) = language.translated(chart) {
+                    assert_ne!(diagram, Some(chart_text), "{code}: Diagram equals {chart}");
+                }
+            }
+        }
+    }
 
     /// Help tables are sorted and unique: lookups binary-search them.
     #[test]
